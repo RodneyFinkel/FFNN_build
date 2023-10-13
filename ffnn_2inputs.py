@@ -1,13 +1,13 @@
-from tensorflow import keras # for buidling neural networks
-from keras.models import Sequential # for creating a linear stack of layers for the neural network
-from keras import Input # for instantiating a keras tensor
-from keras.layers import Dense # for creating regular densely-connected neural network
+from tensorflow import keras 
+from keras.models import Sequential 
+from keras import Input 
+from keras.layers import Dense 
 
 import pandas as pd
 import numpy as np
-import sklearn # for model evaluation
-from sklearn.model_selection import train_test_split # for splitting data into training and test samples
-from sklearn.metrics import classification_report # for model evaluation metrics
+import sklearn 
+from sklearn.model_selection import train_test_split 
+from sklearn.metrics import classification_report 
 
 import plotly
 import plotly.express as px
@@ -17,34 +17,28 @@ import plotly.graph_objects as go
 pd.options.display.max_columns=50
 df = pd.read_csv('weatherAUS.csv', encoding='utf-8')
 
-# drop records where target RainTomorrow=NaN
 df = df.dropna(subset=['RainTomorrow'])
 
 # Fill missing values for numeric columns only, using mean of column
-numeric_columns = df.select_dtypes(include=['number']).columns #.columns accesses the columns names attribute of the resulting dataframe
+numeric_columns = df.select_dtypes(include=['number']).columns 
 df[numeric_columns] = df[numeric_columns].fillna(df[numeric_columns].mean())
 
 # create a flag for RainToday and RainTomorrow, note: RainTomorrowFlag will be our target variable
 df['RainTodayFlag'] = df['RainToday'].apply(lambda x: 1 if x == 'Yes' else 0)
 df['RainTomorrowFlag'] = df['RainTomorrow'].apply(lambda x: 1 if x == 'Yes' else 0)
 
-
-
 # Select data for multiviariate modeling, two inputs
 X=df[['WindGustSpeed', 'Humidity3pm']]
 y=df['RainTomorrowFlag'].values
 
-
 # Create training and testing samples
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
-
 
 # 2-2-1 Neural Network
 model2 = Sequential(name="Model-with-Two-Inputs") 
 model2.add(Input(shape=(2,), name='Input-Layer')) 
 model2.add(Dense(2, activation='softplus', name='Hidden-Layer')) 
 model2.add(Dense(1, activation='sigmoid', name='Output-Layer')) 
-
 
 # Compile the keras model
 model2.compile(optimizer='adam', 
@@ -55,7 +49,6 @@ model2.compile(optimizer='adam',
               run_eagerly=None, 
               steps_per_execution=None 
              )
-
 
 # Fit keras model on the dataset
 model2.fit(X_train, 
@@ -78,13 +71,10 @@ model2.fit(X_train,
           use_multiprocessing=False, 
          )
 
-
-# Use model to make predictions
 # Predict class labels on training data
 pred_labels_tr = (model2.predict(X_train) > 0.5).astype(int)
 # Predict class labels on a test data
 pred_labels_te = (model2.predict(X_test) > 0.5).astype(int)
-
 
 # Model Performance Summary
 print("")
@@ -108,9 +98,10 @@ print("")
 
 
 def Plot_3D(X, X_test, y_test, clf, x1, x2, mesh_size, margin):
-            
-    # Specify a size of the mesh to be used
-    mesh_size=mesh_size
+    
+    # clf refers to the name of the model constructed in the neural network. In this case model2       
+    # Specify a size of the mesh to be used and assign to local variables
+    mesh_size=mesh_size # granularity/step size of the mesh grid
     margin=margin
 
     # Create a mesh grid on which we will run our model
@@ -118,15 +109,23 @@ def Plot_3D(X, X_test, y_test, clf, x1, x2, mesh_size, margin):
     y_min, y_max = X.iloc[:, 1].min() - margin, X.iloc[:, 1].max() + margin
     xrange = np.arange(x_min, x_max, mesh_size)
     yrange = np.arange(y_min, y_max, mesh_size)
-    xx, yy = np.meshgrid(xrange, yrange)
+    # np.meshgrid(x, y, z) possible to provide three or more input arrays, 
+    # which will create the values for a higher-dimensional grid space.
+    xx, yy = np.meshgrid(xrange, yrange, sparse=False) # meshgrid generates coordinate matrices by taking 2 1-D arrays and returns 2 2-D arrays with all pairs of x,y in the input arrays
             
     # Calculate Neural Network predictions on the grid
+    # np.c_() is np.concatenate(axis)
     Z = model2.predict(np.c_[xx.ravel(), yy.ravel()])
     Z = Z.reshape(xx.shape)
 
-    # Create a 3D scatter plot
+    # Create a 3D scatter plot using the test data for true z values for comparison with the surface plot
+    # of predicted values (not working correctly, possible that test size split is too small)
     fig = px.scatter_3d(x=X_test[x1], y=X_test[x2], z=y_test,
                      opacity=0.8, color_discrete_sequence=['black'], height=900, width=1000)
+    
+    # Create a 3D scatter plot using the X data from meshgrid for predicted z values
+    # fig = px.scatter_3d(x=xx.ravel(), y=yy.ravel(), z=Z.ravel(),
+    #                  opacity=0.8, color_discrete_sequence=['black'], height=900, width=1000)
 
     # Set figure title and colors
     fig.update_layout(#title_text="Scatter 3D Plot with FF Neural Network Prediction Surface",
@@ -153,7 +152,7 @@ def Plot_3D(X, X_test, y_test, clf, x1, x2, mesh_size, margin):
     # Update marker size
     fig.update_traces(marker=dict(size=1))
 
-    # Add prediction plane
+    # Add prediction plane/surface plot to fig (add_traces ie traces equivalent to plot)
     fig.add_traces(go.Surface(x=xrange, y=yrange, z=Z, name='FF NN Prediction Plane',
                               colorscale='Bluered',
                               reversescale=True,

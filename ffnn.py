@@ -95,7 +95,7 @@ for layer in model.layers:
     
 print("")
 print('---------- Evaluation on Training Data ----------')
-print(classification_report(y_train, pred_labels_tr))
+print(classification_report(y_train, pred_labels_tr))  # classifaction report is a scikit-learn function that provides metrics for assesing the models performance on the training data
 print("")
 
 
@@ -103,10 +103,11 @@ print("")
 # Create 100 evenly spaced points from smallest X to largest X
 X_range = np.linspace(X.min(), X.max(), 100)
 # Predict probabilities for rain tomorrow
-y_predicted = model.predict(X_range.reshape(-1, 1))
+# tranforming X_range from a one column vector to a diagonal matrix with the dimension of the amout of elements in the original 1-d array. Scikit-learn expects a 2-d array to be passed
+y_predicted = model.predict(X_range.reshape(-1, 1)) # using the trained ffnn model, we use the reshaped X_range values to predict probability of rainfall the following day
 
 # Create a scatter plot
-fig = px.scatter(x=X_range.ravel(), y=y_predicted.ravel(), 
+fig = px.scatter(x=X_range.ravel(), y=y_predicted.ravel(), # using .ravel() to go back to a 1-d array from a 2-d array
                  opacity=0.8, color_discrete_sequence=['black'],
                  labels=dict(x="Value of Humidity3pm", y="Predicted Probability of Rain Tomorrow",))
 
